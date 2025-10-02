@@ -136,8 +136,19 @@ public class GridManager : MonoBehaviour
     /// </summary>
     public void OnCellRightClicked(GridCell cell, PointerEventData eventData)
     {
+        if (showDebug)
+        {
+            Debug.Log($"🖱️ ПКМ по ячейке {cell.gridPosition}");
+        }
+
         if (!rightClickToRemove)
+        {
+            if (showDebug)
+            {
+                Debug.LogWarning("⚠️ Удаление по ПКМ ВЫКЛЮЧЕНО в настройках!");
+            }
             return;
+        }
 
         if (cell.IsOccupied())
         {
@@ -145,7 +156,14 @@ public class GridManager : MonoBehaviour
             
             if (showDebug)
             {
-                Debug.Log($"Удален объект из ячейки {cell.gridPosition}");
+                Debug.Log($"✅ Удален объект из ячейки {cell.gridPosition}");
+            }
+        }
+        else
+        {
+            if (showDebug)
+            {
+                Debug.Log($"ℹ️ Ячейка {cell.gridPosition} пустая, нечего удалять");
             }
         }
     }
