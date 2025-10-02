@@ -2756,6 +2756,7 @@ GameObject:
   - component: {fileID: 725732641}
   - component: {fileID: 725732640}
   - component: {fileID: 725732642}
+  - component: {fileID: 725732643}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -2777,6 +2778,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   gridManager: {fileID: 376343604}
   waveSpawner: {fileID: 725732642}
+  battleManager: {fileID: 725732643}
   startButton: {fileID: 132223081}
   objectToMove: {fileID: 96057299}
   moveDuration: 1
@@ -2840,6 +2842,25 @@ MonoBehaviour:
   spawnZoneX: {x: 5, y: 9}
   spawnZoneY: {x: 0, y: 9}
   showDebug: 1
+--- !u!114 &725732643
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 725732639}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f6a1b4c5d6e7f8a9b0c1d2e3f4a5b6c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gridManager: {fileID: 376343604}
+  gridTransform: {fileID: 376343601}
+  victoryDelay: 2
+  returnSpeed: 500
+  respawnDelay: 0.5
+  showDebug: 0
+  heroPrefab: {fileID: 6609384685568130675, guid: b3cb894d754b4804791c63d0c3eea735, type: 3}
 --- !u!1001 &733412151
 PrefabInstance:
   m_ObjectHideFlags: 0

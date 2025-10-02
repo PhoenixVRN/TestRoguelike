@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour
     [Header("Ссылки")]
     [SerializeField] private GridManager gridManager;
     [SerializeField] private WaveSpawner waveSpawner;
+    [SerializeField] private BattleManager battleManager;
     
     [Header("UI")]
     [Tooltip("Кнопка которая показывается когда есть герои")]
@@ -16,6 +17,8 @@ public class GameManager : MonoBehaviour
     
     [Tooltip("Объект который будет двигаться при нажатии кнопки")]
     [SerializeField] private RectTransform objectToMove;
+    
+    private Vector2 objectToMoveStartPosition; // Начальная позиция для возврата
     
     [Header("Настройки анимации")]
     [Tooltip("Скорость перемещения (секунды)")]
@@ -36,6 +39,17 @@ public class GameManager : MonoBehaviour
         if (gridManager == null)
         {
             gridManager = FindObjectOfType<GridManager>();
+        }
+
+        // Сохраняем начальную позицию objectToMove
+        if (objectToMove != null)
+        {
+            objectToMoveStartPosition = objectToMove.anchoredPosition;
+            
+            if (showDebug)
+            {
+                Debug.Log($"📍 Начальная позиция objectToMove сохранена: {objectToMoveStartPosition}");
+            }
         }
 
         // Скрываем кнопку при старте
@@ -153,6 +167,12 @@ public class GameManager : MonoBehaviour
         if (showDebug)
         {
             Debug.Log($"🎮 Кнопка нажата! Героев на поле: {heroCount}");
+        }
+
+        // СОХРАНЯЕМ РАССТАНОВКУ ГЕРОЕВ (для респавна после победы)
+        if (battleManager != null)
+        {
+            battleManager.SaveHeroSetup();
         }
 
         // БЛОКИРУЕМ РАЗМЕЩЕНИЕ ПЕРСОНАЖЕЙ
@@ -359,6 +379,12 @@ public class GameManager : MonoBehaviour
         
         // Теперь запускаем бой
         StartBattle();
+        
+        // Уведомляем Battle Manager что бой начался
+        if (battleManager != null)
+        {
+            battleManager.StartBattle();
+        }
     }
 
     /// <summary>
@@ -385,6 +411,30 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log("🔄 Игра сброшена! Можно расставлять героев снова.");
         }
+    }
+
+    /// <summary>
+    /// Вернуть objectToMove в начальную позицию (X=959) МГНОВЕННО
+    /// </summary>
+    public void ResetObjectToMovePosition()
+    {
+        if (objectToMove != null)
+        {
+            objectToMove.anchoredPosition = objectToMoveStartPosition;
+            
+            if (showDebug)
+            {
+                Debug.Log($"⚡ objectToMove вернулся МГНОВЕННО в: {objectToMoveStartPosition}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Получить начальную позицию objectToMove
+    /// </summary>
+    public Vector2 GetObjectToMoveStartPosition()
+    {
+        return objectToMoveStartPosition;
     }
 }
 

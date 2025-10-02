@@ -296,6 +296,16 @@ public class CharacterController : MonoBehaviour
         }
     }
 
+    [Header("Настройки смерти")]
+    [Tooltip("Удалять труп через N секунд после смерти (0 = не удалять)")]
+    [SerializeField] private float removeCorpseDelay = 3f;
+    
+    [Tooltip("Плавно растворять труп перед удалением")]
+    [SerializeField] private bool fadeOutCorpse = true;
+    
+    [Tooltip("Длительность растворения (секунды)")]
+    [SerializeField] private float fadeOutDuration = 1f;
+
     /// <summary>
     /// Смерть персонажа
     /// </summary>
@@ -318,8 +328,97 @@ public class CharacterController : MonoBehaviour
             Debug.Log($"💀 {config.characterName} погиб!");
         }
 
-        // Можно удалить через несколько секунд
-        // Destroy(gameObject, 3f);
+        // Удаляем труп через заданное время
+        if (removeCorpseDelay > 0)
+        {
+            if (fadeOutCorpse)
+            {
+                StartCoroutine(FadeOutAndDestroy());
+            }
+            else
+            {
+                Destroy(gameObject, removeCorpseDelay);
+                
+                if (showDebug)
+                {
+                    Debug.Log($"🗑️ {config.characterName} будет удалён через {removeCorpseDelay}с");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Плавно растворить труп и удалить
+    /// </summary>
+    private System.Collections.IEnumerator FadeOutAndDestroy()
+    {
+        // Ждём перед началом растворения
+        float waitBeforeFade = removeCorpseDelay - fadeOutDuration;
+        if (waitBeforeFade > 0)
+        {
+            yield return new WaitForSeconds(waitBeforeFade);
+        }
+
+        if (showDebug)
+        {
+            Debug.Log($"👻 {config.characterName} начинает растворяться...");
+        }
+
+        // Получаем все Image компоненты для растворения
+        UnityEngine.UI.Image[] images = GetComponentsInChildren<UnityEngine.UI.Image>();
+        TMPro.TextMeshProUGUI[] texts = GetComponentsInChildren<TMPro.TextMeshProUGUI>();
+        
+        // Сохраняем исходные цвета
+        Color[] originalColors = new Color[images.Length];
+        for (int i = 0; i < images.Length; i++)
+        {
+            originalColors[i] = images[i].color;
+        }
+        
+        Color[] originalTextColors = new Color[texts.Length];
+        for (int i = 0; i < texts.Length; i++)
+        {
+            originalTextColors[i] = texts[i].color;
+        }
+
+        // Плавное растворение
+        float elapsed = 0f;
+        while (elapsed < fadeOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            float alpha = 1f - (elapsed / fadeOutDuration);
+
+            // Уменьшаем прозрачность
+            for (int i = 0; i < images.Length; i++)
+            {
+                if (images[i] != null)
+                {
+                    Color c = originalColors[i];
+                    c.a = alpha;
+                    images[i].color = c;
+                }
+            }
+            
+            for (int i = 0; i < texts.Length; i++)
+            {
+                if (texts[i] != null)
+                {
+                    Color c = originalTextColors[i];
+                    c.a = alpha;
+                    texts[i].color = c;
+                }
+            }
+
+            yield return null;
+        }
+
+        // Удаляем объект
+        if (showDebug)
+        {
+            Debug.Log($"🗑️ {config.characterName} удалён!");
+        }
+        
+        Destroy(gameObject);
     }
 
     // ═══════════════════════════════════════════════════════════
