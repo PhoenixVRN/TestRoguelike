@@ -112,12 +112,29 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        bool shouldShow = heroCount > 0;
+        // Проверяем что размещение НЕ заблокировано (не идёт бой)
+        bool isPlacementMode = gridManager != null && !gridManager.IsPlacementLocked();
+        
+        // Проверяем что objectToMove в исходном положении (X близко к 959)
+        bool isInStartPosition = true;
+        if (objectToMove != null)
+        {
+            float currentX = objectToMove.anchoredPosition.x;
+            float startX = objectToMoveStartPosition.x;
+            isInStartPosition = Mathf.Abs(currentX - startX) < 50f; // Допуск 50 пикселей
+        }
+
+        // Кнопка показывается ТОЛЬКО если:
+        // 1. Есть герои на поле
+        // 2. НЕ идёт бой (размещение не заблокировано)
+        // 3. UI в исходном положении
+        bool shouldShow = heroCount > 0 && isPlacementMode && isInStartPosition;
+        
         startButton.SetActive(shouldShow);
 
-        if (showDebug)
+        if (showDebug && shouldShow != startButton.activeSelf)
         {
-            Debug.Log($"Кнопка: {(shouldShow ? "ПОКАЗАНА" : "СКРЫТА")} (героев: {heroCount})");
+            Debug.Log($"Кнопка: {(shouldShow ? "ПОКАЗАНА" : "СКРЫТА")} | Героев: {heroCount} | Режим расстановки: {isPlacementMode} | UI на месте: {isInStartPosition}");
         }
     }
 
