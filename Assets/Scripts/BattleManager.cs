@@ -10,7 +10,8 @@ public class BattleManager : MonoBehaviour
     [Header("Ссылки")]
     [SerializeField] private GridManager gridManager;
     [SerializeField] private RectTransform gridTransform;
-    [SerializeField] private GameManager gameManager; // Для возврата objectToMove
+    [SerializeField] private GameManager gameManager;
+    [SerializeField] private ScreenFade screenFade;
     
     [Header("Настройки победы")]
     [Tooltip("Задержка после победы перед возвратом Grid")]
@@ -211,12 +212,29 @@ public class BattleManager : MonoBehaviour
         // Ждём после победы
         yield return new WaitForSeconds(victoryDelay);
 
+        // ЗАТЕМНЯЕМ ЭКРАН (Fade to Black)
+        if (screenFade != null)
+        {
+            bool fadeComplete = false;
+            screenFade.FadeIn(() => fadeComplete = true);
+            
+            while (!fadeComplete)
+                yield return null;
+                
+            if (showDebug)
+            {
+                Debug.Log("🌑 Экран затемнён - выполняем рестарт...");
+            }
+        }
+
+        // ВО ВРЕМЯ ЗАТЕМНЕНИЯ выполняем все действия
+        
         if (showDebug)
         {
             Debug.Log("🔄 Возвращаем Grid и UI в начальную позицию МГНОВЕННО...");
         }
 
-        // МГНОВЕННО возвращаем Grid на место (X = 959 или начальная)
+        // МГНОВЕННО возвращаем Grid на место (X = 959)
         if (gridTransform != null)
         {
             gridTransform.anchoredPosition = gridStartPosition;
@@ -227,30 +245,40 @@ public class BattleManager : MonoBehaviour
             }
         }
         
-        // МГНОВЕННО возвращаем objectToMove на место через GameManager
+        // МГНОВЕННО возвращаем objectToMove
         if (gameManager != null)
         {
             gameManager.ResetObjectToMovePosition();
         }
-        else if (showDebug)
-        {
-            Debug.LogWarning("⚠️ GameManager не назначен! objectToMove не вернулся.");
-        }
-
-        // Небольшая пауза для визуального эффекта
-        yield return new WaitForSeconds(0.2f);
 
         // Очищаем поле от всех персонажей
         if (gridManager != null)
         {
             gridManager.ClearAll();
-            gridManager.UnlockPlacement(); // Разблокируем размещение
+            gridManager.UnlockPlacement();
         }
 
         yield return new WaitForSeconds(0.3f);
 
-        // Респавним героев на сохранённых позициях
+        // Респавним героев
         yield return StartCoroutine(RespawnHeroes());
+
+        yield return new WaitForSeconds(0.2f);
+
+        // РАЗВЕИВАЕМ ЗАТЕМНЕНИЕ (Fade from Black)
+        if (screenFade != null)
+        {
+            bool fadeComplete = false;
+            screenFade.FadeOut(() => fadeComplete = true);
+            
+            while (!fadeComplete)
+                yield return null;
+                
+            if (showDebug)
+            {
+                Debug.Log("☀️ Затемнение развеяно - готово!");
+            }
+        }
 
         isReturning = false;
 

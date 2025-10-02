@@ -16,8 +16,11 @@ MonoBehaviour:
   waveNumber: 1
   enemies:
   - enemyPrefab: {fileID: 740782638938415676, guid: b926d467b67082a43b8aa868401d4fe8, type: 3}
-    gridPosition: {x: 1535, y: 349}
+    gridPosition: {x: 1802, y: 490}
     randomPosition: 0
   - enemyPrefab: {fileID: 740782638938415676, guid: b926d467b67082a43b8aa868401d4fe8, type: 3}
-    gridPosition: {x: 1535, y: 634}
+    gridPosition: {x: 1802, y: 211}
+    randomPosition: 0
+  - enemyPrefab: {fileID: 740782638938415676, guid: b926d467b67082a43b8aa868401d4fe8, type: 3}
+    gridPosition: {x: 2012, y: 419}
     randomPosition: 0
