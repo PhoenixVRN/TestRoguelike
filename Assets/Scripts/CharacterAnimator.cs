@@ -15,10 +15,8 @@ public class CharacterAnimator : MonoBehaviour
     [SerializeField] private bool showDebug = false;
     
     // Названия параметров в Animator Controller
-    private const string PARAM_IDLE = "Idle";
-    private const string PARAM_MOVE = "Move";
-    private const string PARAM_ATTACK = "Attack";
-    private const string PARAM_DEATH = "Death";
+    private const string PARAM_IS_MOVING = "IsMoving";
+    private const string PARAM_IS_ATTACKING = "IsAttacking";
     private const string PARAM_IS_DEAD = "IsDead";
     
     // Текущее состояние
@@ -61,7 +59,10 @@ public class CharacterAnimator : MonoBehaviour
         if (isDead) return;
         
         SetAnimationState(AnimationState.Idle);
-        animator.SetTrigger(PARAM_IDLE);
+        
+        // Сбрасываем все bool
+        animator.SetBool(PARAM_IS_MOVING, false);
+        animator.SetBool(PARAM_IS_ATTACKING, false);
         
         if (showDebug)
             Debug.Log($"{gameObject.name}: Idle анимация");
@@ -75,7 +76,9 @@ public class CharacterAnimator : MonoBehaviour
         if (isDead) return;
         
         SetAnimationState(AnimationState.Move);
-        animator.SetTrigger(PARAM_MOVE);
+        
+        animator.SetBool(PARAM_IS_MOVING, true);
+        animator.SetBool(PARAM_IS_ATTACKING, false);
         
         if (showDebug)
             Debug.Log($"{gameObject.name}: Move анимация");
@@ -89,7 +92,9 @@ public class CharacterAnimator : MonoBehaviour
         if (isDead) return;
         
         SetAnimationState(AnimationState.Attack);
-        animator.SetTrigger(PARAM_ATTACK);
+        
+        animator.SetBool(PARAM_IS_MOVING, false);
+        animator.SetBool(PARAM_IS_ATTACKING, true);
         
         if (showDebug)
             Debug.Log($"{gameObject.name}: Attack анимация");
@@ -104,7 +109,10 @@ public class CharacterAnimator : MonoBehaviour
         
         isDead = true;
         SetAnimationState(AnimationState.Death);
-        animator.SetTrigger(PARAM_DEATH);
+        
+        // Сбрасываем всё и устанавливаем смерть
+        animator.SetBool(PARAM_IS_MOVING, false);
+        animator.SetBool(PARAM_IS_ATTACKING, false);
         animator.SetBool(PARAM_IS_DEAD, true);
         
         if (showDebug)

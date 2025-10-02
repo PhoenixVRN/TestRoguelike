@@ -56,7 +56,22 @@ public class GameManager : MonoBehaviour
         if (gridManager == null)
             return;
 
-        int currentCount = gridManager.GetOccupiedCells().Count;
+        // Считаем только игроков (Team 0), не врагов!
+        int currentCount = 0;
+        var occupiedCells = gridManager.GetOccupiedCells();
+        
+        foreach (var cell in occupiedCells)
+        {
+            GameObject obj = cell.GetPlacedObject();
+            if (obj != null)
+            {
+                CharacterController controller = obj.GetComponent<CharacterController>();
+                if (controller != null && controller.GetTeam() == 0)
+                {
+                    currentCount++; // Только игроки (Team 0)
+                }
+            }
+        }
 
         // Если количество изменилось - обновляем UI
         if (currentCount != heroCount)
@@ -66,7 +81,7 @@ public class GameManager : MonoBehaviour
 
             if (showDebug)
             {
-                Debug.Log($"Героев на поле: {heroCount}");
+                Debug.Log($"Героев игрока на поле: {heroCount}");
             }
         }
     }

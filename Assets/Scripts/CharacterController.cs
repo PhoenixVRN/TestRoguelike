@@ -69,6 +69,11 @@ public class CharacterController : MonoBehaviour
         if (attackCooldownTimer > 0)
         {
             attackCooldownTimer -= Time.deltaTime;
+            
+            if (showDebug && Time.frameCount % 60 == 0)
+            {
+                Debug.Log($"⏱️ {config.characterName} Update: Кулдаун уменьшается: {attackCooldownTimer:F2}с, State: {currentState}");
+            }
         }
 
         // AI логика
@@ -143,17 +148,27 @@ public class CharacterController : MonoBehaviour
             
             if (showDebug && Time.frameCount % 60 == 0) // Раз в секунду
             {
-                Debug.Log($"📊 {config.characterName} [Team:{config.team}] → Цель: {currentTarget.GetCharacterName()} [Team:{currentTarget.GetTeam()}], Дистанция: {distanceToTarget:F1}, Range: {config.attackRange}");
+                Debug.Log($"📊 {config.characterName} [Team:{config.team}] → Цель: {currentTarget.GetCharacterName()} [Team:{currentTarget.GetTeam()}], Дистанция: {distanceToTarget:F1}, Range: {config.attackRange}, Кулдаун: {attackCooldownTimer:F2}");
             }
             
             // Если в радиусе атаки - атакуем
             if (distanceToTarget <= config.attackRange)
             {
-                Attack();
+                Attack(); // Эта функция сама проверит кулдаун
             }
-            // Иначе двигаемся к цели
+            // Если далеко И кулдаун закончился - двигаемся
+            else if (attackCooldownTimer <= 0)
+            {
+                MoveToTarget();
+            }
+            // Иначе стоим на месте (кулдаун идёт, но цель далеко - можем подождать)
             else
             {
+                // Можно либо стоять, либо всё равно двигаться
+                // Вариант 1: Стоим
+                // SetState(CharacterState.Idle);
+                
+                // Вариант 2: Двигаемся даже во время кулдауна (реалистичнее)
                 MoveToTarget();
             }
         }
@@ -231,36 +246,26 @@ public class CharacterController : MonoBehaviour
         if (currentTarget == null || isDead)
             return;
 
-        // Проверяем кулдаун
+        // Устанавливаем состояние атаки (анимация зациклена, будет играть постоянно)
+        SetState(CharacterState.Attacking);
+
+        // Проверяем кулдаун для НАНЕСЕНИЯ УРОНА (не для анимации!)
         if (attackCooldownTimer > 0)
         {
-            SetState(CharacterState.Idle);
-            
-            if (showDebug && Time.frameCount % 60 == 0)
-            {
-                Debug.Log($"⏳ {config.characterName} ждёт кулдаун: {attackCooldownTimer:F1}с");
-            }
+            // Анимация играет, но урон не наносим (кулдаун)
             return;
         }
 
-        SetState(CharacterState.Attacking);
-        
-        // Запускаем анимацию атаки
-        if (characterAnimator != null)
-        {
-            characterAnimator.PlayAttack();
-        }
-        
-        // Наносим урон
-        currentTarget.TakeDamage(config.damage, this);
-        
-        // Устанавливаем кулдаун
-        attackCooldownTimer = config.GetAttackCooldown();
-        
+        // Кулдаун закончился - наносим урон!
         if (showDebug)
         {
-            Debug.Log($"⚔️ {config.characterName} атаковал {currentTarget.GetCharacterName()} на {config.damage} урона!");
+            Debug.Log($"⚔️ {config.characterName} наносит урон {currentTarget.GetCharacterName()} на {config.damage}!");
         }
+        
+        currentTarget.TakeDamage(config.damage, this);
+        
+        // Устанавливаем кулдаун для следующего урона
+        attackCooldownTimer = config.GetAttackCooldown();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -326,9 +331,13 @@ public class CharacterController : MonoBehaviour
     /// </summary>
     private void SetState(CharacterState newState)
     {
-        if (currentState == newState)
+        // Для Attacking разрешаем повторный вызов (чтобы анимация обновлялась)
+        bool shouldUpdate = (currentState != newState) || (newState == CharacterState.Attacking);
+        
+        if (!shouldUpdate)
             return;
 
+        CharacterState oldState = currentState;
         currentState = newState;
         
         // Обновляем анимацию
@@ -337,13 +346,16 @@ public class CharacterController : MonoBehaviour
             switch (currentState)
             {
                 case CharacterState.Idle:
-                    characterAnimator.PlayIdle();
+                    if (oldState != CharacterState.Idle)
+                        characterAnimator.PlayIdle();
                     break;
                 case CharacterState.Moving:
-                    characterAnimator.PlayMove();
+                    if (oldState != CharacterState.Moving)
+                        characterAnimator.PlayMove();
                     break;
                 case CharacterState.Attacking:
-                    // Анимация уже запущена в Attack()
+                    // Всегда обновляем анимацию атаки (даже если уже Attacking)
+                    characterAnimator.PlayAttack();
                     break;
                 case CharacterState.Dead:
                     // Анимация уже запущена в Die()
@@ -437,6 +449,51 @@ public class CharacterController : MonoBehaviour
             Gizmos.color = Color.yellow;
             Gizmos.DrawLine(transform.position, currentTarget.transform.position);
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // ТЕСТОВЫЕ МЕТОДЫ
+    // ═══════════════════════════════════════════════════════════
+
+    [ContextMenu("🎬 ТЕСТ: Проиграть анимацию атаки")]
+    private void TestAttackAnimation()
+    {
+        if (characterAnimator != null)
+        {
+            Debug.Log($"🧪 ТЕСТ: Запускаю анимацию атаки для {gameObject.name}");
+            characterAnimator.PlayAttack();
+        }
+        else
+        {
+            Debug.LogError($"❌ Character Animator НЕ НАЗНАЧЕН на {gameObject.name}!");
+        }
+    }
+
+    [ContextMenu("📊 ТЕСТ: Проверить настройки")]
+    private void TestSettings()
+    {
+        Debug.Log("═══════════════════════════════════════════════════════");
+        Debug.Log($"🧪 ДИАГНОСТИКА: {gameObject.name}");
+        Debug.Log("═══════════════════════════════════════════════════════");
+        Debug.Log($"Config: {(config != null ? config.name : "НЕ НАЗНАЧЕН ❌")}");
+        Debug.Log($"Character Animator: {(characterAnimator != null ? "Назначен ✅" : "НЕ НАЗНАЧЕН ❌")}");
+        
+        if (characterAnimator != null)
+        {
+            var animator = characterAnimator.GetAnimator();
+            Debug.Log($"Animator: {(animator != null ? "Назначен ✅" : "НЕ НАЗНАЧЕН ❌")}");
+            
+            if (animator != null)
+            {
+                Debug.Log($"Animator Controller: {(animator.runtimeAnimatorController != null ? animator.runtimeAnimatorController.name + " ✅" : "НЕ НАЗНАЧЕН ❌")}");
+            }
+        }
+        
+        Debug.Log($"Health Bar: {(healthBar != null ? "Назначен ✅" : "Нет (опционально)")}");
+        Debug.Log($"Current State: {currentState}");
+        Debug.Log($"Is Dead: {isDead}");
+        Debug.Log($"In Battle: {isInBattle}");
+        Debug.Log("═══════════════════════════════════════════════════════");
     }
 }
 
