@@ -8,6 +8,7 @@ public class GameManager : MonoBehaviour
 {
     [Header("Ссылки")]
     [SerializeField] private GridManager gridManager;
+    [SerializeField] private WaveSpawner waveSpawner;
     
     [Header("UI")]
     [Tooltip("Кнопка которая показывается когда есть герои")]
@@ -139,13 +140,30 @@ public class GameManager : MonoBehaviour
             Debug.Log($"🎮 Кнопка нажата! Героев на поле: {heroCount}");
         }
 
+        // БЛОКИРУЕМ РАЗМЕЩЕНИЕ ПЕРСОНАЖЕЙ
+        if (gridManager != null)
+        {
+            gridManager.LockPlacement();
+        }
+
+        // Скрываем кнопку
+        HideButton();
+
         // Запускаем плавное перемещение объекта
         if (objectToMove != null && !isMoving)
         {
             StartCoroutine(MoveObjectToZero());
         }
         
-        StartBattle();
+        // Запускаем бой (с врагами из WaveSpawner если есть)
+        if (waveSpawner != null)
+        {
+            StartCoroutine(SpawnWaveAndStartBattle());
+        }
+        else
+        {
+            StartBattle();
+        }
     }
     
     /// <summary>
@@ -217,28 +235,142 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Начать бой (пример)
+    /// Начать бой
     /// </summary>
     private void StartBattle()
     {
+        Debug.Log("═══════════════════════════════════════");
         Debug.Log("⚔️ БОЙ НАЧАЛСЯ!");
         
-        // Здесь ваша логика боя
-        // Можно получить всех героев:
+        // Получаем всех размещенных героев
         var occupiedCells = gridManager.GetOccupiedCells();
         
+        if (occupiedCells.Count == 0)
+        {
+            Debug.LogWarning("❌ Нет героев для боя!");
+            return;
+        }
+        
+        Debug.Log($"📊 Всего героев на поле: {occupiedCells.Count}");
+        
+        int team0Count = 0;
+        int team1Count = 0;
+        
+        // Активируем AI всех персонажей
         foreach (var cell in occupiedCells)
         {
-            GameObject hero = cell.GetPlacedObject();
-            Debug.Log($"Герой в бою: {hero.name} на позиции {cell.gridPosition}");
+            GameObject heroObj = cell.GetPlacedObject();
             
-            // Можно запустить анимацию атаки
-            CharacterAnimator anim = hero.GetComponent<CharacterAnimator>();
-            if (anim != null)
+            if (heroObj == null)
             {
-                anim.PlayAttack();
+                Debug.LogWarning("⚠️ Пустой объект в ячейке!");
+                continue;
             }
+            
+            CharacterController controller = heroObj.GetComponent<CharacterController>();
+            
+            if (controller != null)
+            {
+                // Проверяем конфиг
+                var config = controller.GetConfig();
+                if (config == null)
+                {
+                    Debug.LogError($"❌ У {heroObj.name} НЕТ CharacterConfig! Назначьте в CharacterController!");
+                    continue;
+                }
+                
+                controller.StartBattle(); // Запускаем AI
+                
+                int team = controller.GetTeam();
+                if (team == 0) team0Count++;
+                else team1Count++;
+                
+                Debug.Log($"✅ {controller.GetCharacterName()} готов к бою! " +
+                         $"[Team: {team}] [HP: {controller.GetMaxHealth()}] " +
+                         $"[Damage: {config.damage}] " +
+                         $"[Config: {config.name}]");
+            }
+            else
+            {
+                Debug.LogError($"❌ У {heroObj.name} НЕТ CharacterController! Добавьте компонент!");
+                
+                // Покажем какие компоненты есть
+                var components = heroObj.GetComponents<Component>();
+                string componentsList = "";
+                foreach (var comp in components)
+                {
+                    componentsList += comp.GetType().Name + ", ";
+                }
+                Debug.Log($"   Компоненты на объекте: {componentsList}");
+            }
+        }
+        
+        Debug.Log($"📊 Команда 0 (игрок): {team0Count} героев");
+        Debug.Log($"📊 Команда 1 (враги): {team1Count} героев");
+        
+        if (team0Count > 0 && team1Count > 0)
+        {
+            Debug.Log("✅ Обе команды готовы! Бой начинается!");
+        }
+        else if (team0Count == 0)
+        {
+            Debug.LogWarning("⚠️ Нет героев в команде 0 (игрок)!");
+        }
+        else if (team1Count == 0)
+        {
+            Debug.LogWarning("⚠️ Нет героев в команде 1 (враги)! Некого атаковать!");
+        }
+        
+        Debug.Log("═══════════════════════════════════════");
+    }
+    
+    /// <summary>
+    /// Заспавнить волну врагов и начать бой
+    /// </summary>
+    private System.Collections.IEnumerator SpawnWaveAndStartBattle()
+    {
+        Debug.Log("🌊 Спавним волну врагов...");
+        
+        // Спавним первую волну
+        waveSpawner.SpawnWave(0);
+        
+        // Ждём пока закончится спавн
+        while (waveSpawner.IsSpawning())
+        {
+            yield return null;
+        }
+        
+        yield return new WaitForSeconds(0.5f); // Небольшая пауза
+        
+        // Теперь запускаем бой
+        StartBattle();
+    }
+
+    /// <summary>
+    /// Сбросить состояние игры (для следующего раунда)
+    /// </summary>
+    public void ResetGame()
+    {
+        // Разблокируем размещение
+        if (gridManager != null)
+        {
+            gridManager.UnlockPlacement();
+            gridManager.ClearAll();
+        }
+        
+        // Показываем кнопку снова
+        if (startButton != null)
+        {
+            startButton.SetActive(false); // Сначала скрыта пока не разместят героев
+        }
+        
+        heroCount = 0;
+        
+        if (showDebug)
+        {
+            Debug.Log("🔄 Игра сброшена! Можно расставлять героев снова.");
         }
     }
 }
+
 

@@ -1,0 +1,228 @@
+═══════════════════════════════════════════════════════════════
+    АВТОМАТИЧЕСКАЯ РАССТАНОВКА ВРАГОВ - Wave Spawner
+═══════════════════════════════════════════════════════════════
+
+📦 СОЗДАННЫЕ КОМПОНЕНТЫ:
+────────────────────────────────────────────────────────────────
+✅ WaveConfig.cs     - Конфиг волны врагов
+✅ WaveSpawner.cs    - Сервис автоматического спавна
+
+═══════════════════════════════════════════════════════════════
+
+📋 ШАГ 1: СОЗДАНИЕ КОНФИГА ВОЛНЫ
+────────────────────────────────────────────────────────────────
+
+1. **Project → Assets → ПКМ → Create → Game → Wave Config**
+2. Назовите **"Wave_1"**
+3. Откройте в Inspector:
+
+**Информация о волне:**
+   Wave Name: "Волна 1"
+   Wave Number: 1
+
+**Enemies (список врагов):**
+   Size: 3 (например, 3 врага)
+   
+   Element 0:
+      Enemy Prefab: перетащите Enemy префаб
+      Grid Position: (7, 5)    ← Позиция в сетке
+      Random Position: ☐       ← Или случайная
+   
+   Element 1:
+      Enemy Prefab: Enemy
+      Grid Position: (8, 3)
+      Random Position: ☐
+   
+   Element 2:
+      Enemy Prefab: Enemy
+      Grid Position: (9, 7)
+      Random Position: ☐
+
+4. Сохраните!
+
+═══════════════════════════════════════════════════════════════
+
+📋 ШАГ 2: НАСТРОЙКА WAVE SPAWNER
+────────────────────────────────────────────────────────────────
+
+1. **Hierarchy → Create Empty**
+2. Назовите **"WaveSpawner"**
+3. **Add Component → Wave Spawner**
+4. Inspector:
+
+**Ссылки:**
+   Grid Manager: перетащите Grid ⭐
+
+**Конфиги волн:**
+   Waves (список):
+      Size: 1
+      Element 0: Wave_1 ⭐
+
+**Настройки спавна:**
+   Spawn Delay: 0.2        ← Задержка между врагами
+   Spawn On Start: ☐       ← Автоспавн при старте
+   Spawn Zone X: (5, 9)    ← Зона справа
+   Spawn Zone Y: (0, 9)    ← Вся высота
+   Show Debug: ✓
+
+═══════════════════════════════════════════════════════════════
+
+📋 ШАГ 3: ИСПОЛЬЗОВАНИЕ
+────────────────────────────────────────────────────────────────
+
+**Вариант 1: Из кода (в GameManager)**
+
+```csharp
+public class GameManager : MonoBehaviour
+{
+    [SerializeField] private WaveSpawner waveSpawner;
+    
+    private void StartBattle()
+    {
+        // Спавним первую волну врагов
+        waveSpawner.SpawnWave(0);
+        
+        // Ждём и запускаем бой
+        StartCoroutine(StartBattleAfterSpawn());
+    }
+    
+    private IEnumerator StartBattleAfterSpawn()
+    {
+        // Ждём пока закончится спавн
+        while (waveSpawner.IsSpawning())
+        {
+            yield return null;
+        }
+        
+        // Теперь запускаем бой
+        var cells = gridManager.GetOccupiedCells();
+        foreach (var cell in cells)
+        {
+            var controller = cell.GetPlacedObject().GetComponent<CharacterController>();
+            if (controller != null)
+            {
+                controller.StartBattle();
+            }
+        }
+    }
+}
+```
+
+**Вариант 2: Тест в редакторе**
+
+1. Выберите WaveSpawner в Hierarchy
+2. ПКМ на компоненте:
+   - **"Заспавнить текущую волну"** → враги появятся!
+   - **"Очистить всех"** → враги удалятся
+
+**Вариант 3: Автоматически при старте**
+
+WaveSpawner → Spawn On Start: ✓
+
+═══════════════════════════════════════════════════════════════
+
+💡 ПРИМЕРЫ КОНФИГОВ ВОЛН
+────────────────────────────────────────────────────────────────
+
+**Волна 1 (лёгкая):**
+   3 врага в фиксированных позициях
+   Позиции: (7,3), (8,5), (9,7)
+
+**Волна 2 (средняя):**
+   5 врагов, 3 случайных
+   - 2 врага в фиксированных
+   - 3 с Random Position: ✓
+
+**Волна 3 (сложная):**
+   8 врагов, все случайные
+   - Random Position: ✓ для всех
+
+═══════════════════════════════════════════════════════════════
+
+🎯 API WaveSpawner
+────────────────────────────────────────────────────────────────
+
+// Спавн волн
+waveSpawner.SpawnWave(0);          // Заспавнить волну 0
+waveSpawner.SpawnCurrentWave();    // Текущую волну
+waveSpawner.SpawnNextWave();       // Следующую волну
+
+// Информация
+int count = waveSpawner.GetWaveCount();       // Кол-во волн
+int current = waveSpawner.GetCurrentWaveIndex(); // Текущая
+bool spawning = waveSpawner.IsSpawning();     // Идёт спавн?
+
+// Утилиты
+waveSpawner.ClearAllEnemies();     // Очистить всех
+waveSpawner.SpawnWaveFromConfig(config); // Из конкретного конфига
+
+═══════════════════════════════════════════════════════════════
+
+🔧 НАСТРОЙКА ЗОН СПАВНА
+────────────────────────────────────────────────────────────────
+
+**Spawn Zone X и Y** определяют где будут появляться враги
+при Random Position.
+
+Примеры:
+   Spawn Zone X: (5, 9)  - правая часть поля
+   Spawn Zone Y: (0, 9)  - вся высота
+   
+   Spawn Zone X: (7, 9)  - крайняя правая
+   Spawn Zone Y: (3, 6)  - центр по высоте
+
+═══════════════════════════════════════════════════════════════
+
+📝 ИНТЕГРАЦИЯ С GAMEMANAGER
+────────────────────────────────────────────────────────────────
+
+Обновите GameManager:
+
+1. Добавьте поле:
+   [SerializeField] private WaveSpawner waveSpawner;
+
+2. Измените StartBattle():
+   
+   private void StartBattle()
+   {
+       // Спавним врагов
+       waveSpawner.SpawnWave(0);
+       
+       // Запускаем бой после спавна
+       StartCoroutine(WaitAndStartBattle());
+   }
+   
+   private IEnumerator WaitAndStartBattle()
+   {
+       while (waveSpawner.IsSpawning())
+           yield return null;
+       
+       // Активируем AI всех персонажей
+       var cells = gridManager.GetOccupiedCells();
+       foreach (var cell in cells)
+       {
+           var controller = cell.GetPlacedObject()
+               .GetComponent<CharacterController>();
+           if (controller != null)
+               controller.StartBattle();
+       }
+   }
+
+═══════════════════════════════════════════════════════════════
+
+✅ ПРЕИМУЩЕСТВА
+────────────────────────────────────────────────────────────────
+
+✅ Не нужно вручную расставлять врагов
+✅ Можно создавать разные конфиги волн
+✅ Легко балансировать сложность
+✅ Поддержка случайных позиций
+✅ Задержка между спавном для красоты
+✅ Зоны спавна для контроля позиций
+
+═══════════════════════════════════════════════════════════════
+
+ВСЁ ГОТОВО! Враги спавнятся автоматически! 🎯
+
+═══════════════════════════════════════════════════════════════
+

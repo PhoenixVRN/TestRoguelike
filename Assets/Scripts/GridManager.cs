@@ -35,6 +35,7 @@ public class GridManager : MonoBehaviour
     private List<GridCell> cells = new List<GridCell>();
     private int currentPrefabIndex = 0;
     private GameObject currentPrefab;
+    private bool isPlacementLocked = false; // Блокировка размещения
 
     private void Awake()
     {
@@ -104,6 +105,16 @@ public class GridManager : MonoBehaviour
     /// </summary>
     public void OnCellClicked(GridCell cell, PointerEventData eventData)
     {
+        // БЛОКИРОВКА: Если размещение заблокировано - игнорируем клик
+        if (isPlacementLocked)
+        {
+            if (showDebug)
+            {
+                Debug.Log("🔒 Размещение заблокировано! Бой уже начался.");
+            }
+            return;
+        }
+        
         GameObject prefab = GetCurrentPrefab();
         
         if (prefab == null)
@@ -136,6 +147,16 @@ public class GridManager : MonoBehaviour
     /// </summary>
     public void OnCellRightClicked(GridCell cell, PointerEventData eventData)
     {
+        // БЛОКИРОВКА: Если размещение заблокировано - запрещаем удаление
+        if (isPlacementLocked)
+        {
+            if (showDebug)
+            {
+                Debug.Log("🔒 Удаление заблокировано! Бой уже начался.");
+            }
+            return;
+        }
+        
         if (showDebug)
         {
             Debug.Log($"🖱️ ПКМ по ячейке {cell.gridPosition}");
@@ -267,6 +288,40 @@ public class GridManager : MonoBehaviour
         return cells.FindAll(c => !c.IsOccupied());
     }
 
+    /// <summary>
+    /// Заблокировать размещение персонажей (бой начался)
+    /// </summary>
+    public void LockPlacement()
+    {
+        isPlacementLocked = true;
+        
+        if (showDebug)
+        {
+            Debug.Log("🔒 Размещение персонажей ЗАБЛОКИРОВАНО!");
+        }
+    }
+
+    /// <summary>
+    /// Разблокировать размещение персонажей (вернуться к расстановке)
+    /// </summary>
+    public void UnlockPlacement()
+    {
+        isPlacementLocked = false;
+        
+        if (showDebug)
+        {
+            Debug.Log("🔓 Размещение персонажей РАЗБЛОКИРОВАНО!");
+        }
+    }
+
+    /// <summary>
+    /// Проверить заблокировано ли размещение
+    /// </summary>
+    public bool IsPlacementLocked()
+    {
+        return isPlacementLocked;
+    }
+
     private void OnGUI()
     {
         if (!showControlHints || (prefabs == null || prefabs.Length == 0))
@@ -293,5 +348,257 @@ public class GridManager : MonoBehaviour
 
         GUI.Label(new Rect(10, 10, 400, 300), help, style);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // ИНСТРУМЕНТЫ ДЛЯ РАЗРАБОТЧИКА
+    // ═══════════════════════════════════════════════════════════
+
+    [ContextMenu("📍 Показать все координаты")]
+    private void ShowAllCoordinates()
+    {
+        // Получаем ячейки заново (работает и в Edit mode)
+        GridCell[] allCells = GetComponentsInChildren<GridCell>();
+        
+        if (allCells.Length == 0)
+        {
+            Debug.LogWarning("❌ Ячейки не найдены! Убедитесь что:");
+            Debug.LogWarning("   1. GridCell объекты созданы в Hierarchy");
+            Debug.LogWarning("   2. Они являются дочерними объектами Grid");
+            Debug.LogWarning("   3. У них есть компонент GridCell");
+            return;
+        }
+
+        Debug.Log("═══════════════════════════════════════════════════════════");
+        Debug.Log($"✅ ДОСТУПНЫЕ КООРДИНАТЫ ({allCells.Length} ячеек):");
+        Debug.Log("═══════════════════════════════════════════════════════════");
+
+        // Находим границы сетки
+        int minX = int.MaxValue;
+        int maxX = int.MinValue;
+        int minY = int.MaxValue;
+        int maxY = int.MinValue;
+
+        foreach (var cell in allCells)
+        {
+            if (cell.gridPosition.x < minX) minX = cell.gridPosition.x;
+            if (cell.gridPosition.x > maxX) maxX = cell.gridPosition.x;
+            if (cell.gridPosition.y < minY) minY = cell.gridPosition.y;
+            if (cell.gridPosition.y > maxY) maxY = cell.gridPosition.y;
+        }
+
+        Debug.Log($"📐 Размер сетки: X=[{minX}..{maxX}], Y=[{minY}..{maxY}]\n");
+
+        // Разделяем на левую и правую стороны
+        int middleX = (minX + maxX) / 2;
+
+        // Левая сторона (игрок)
+        Debug.Log($"<color=cyan>🛡️ Левая сторона (Team 0 - игрок, X ≤ {middleX}):</color>");
+        string leftCoords = "";
+        int leftCount = 0;
+        
+        // Сортируем для красоты
+        System.Array.Sort(allCells, (a, b) => {
+            if (a.gridPosition.x != b.gridPosition.x)
+                return a.gridPosition.x.CompareTo(b.gridPosition.x);
+            return a.gridPosition.y.CompareTo(b.gridPosition.y);
+        });
+        
+        foreach (var cell in allCells)
+        {
+            if (cell.gridPosition.x <= middleX)
+            {
+                leftCoords += $"({cell.gridPosition.x},{cell.gridPosition.y}), ";
+                leftCount++;
+                if (leftCount % 6 == 0) leftCoords += "\n";
+            }
+        }
+        if (leftCount > 0)
+            Debug.Log(leftCoords.TrimEnd(',', ' '));
+        else
+            Debug.Log("(нет ячеек)");
+
+        Debug.Log("");
+
+        // Правая сторона (враги)
+        Debug.Log($"<color=red>⚔️ Правая сторона (Team 1 - враги, X > {middleX}):</color>");
+        string rightCoords = "";
+        int rightCount = 0;
+        foreach (var cell in allCells)
+        {
+            if (cell.gridPosition.x > middleX)
+            {
+                rightCoords += $"({cell.gridPosition.x},{cell.gridPosition.y}), ";
+                rightCount++;
+                if (rightCount % 6 == 0) rightCoords += "\n";
+            }
+        }
+        if (rightCount > 0)
+            Debug.Log(rightCoords.TrimEnd(',', ' '));
+        else
+            Debug.Log("(нет ячеек)");
+
+        Debug.Log("");
+        Debug.Log($"💡 ДЛЯ WAVE CONFIG:");
+        Debug.Log($"   → Используйте координаты из ПРАВОЙ стороны (красные)");
+        Debug.Log($"   → ИЛИ включите Random Position и настройте:");
+        Debug.Log($"      Spawn Zone X: ({middleX + 1}, {maxX})");
+        Debug.Log($"      Spawn Zone Y: ({minY}, {maxY})");
+        Debug.Log("═══════════════════════════════════════════════════════════");
+    }
+
+    [ContextMenu("📊 Статистика сетки")]
+    private void ShowGridStats()
+    {
+        // Получаем ячейки заново
+        GridCell[] allCells = GetComponentsInChildren<GridCell>();
+        
+        Debug.Log("═══════════════════════════════════════════════════════════");
+        Debug.Log("📊 СТАТИСТИКА СЕТКИ:");
+        Debug.Log("═══════════════════════════════════════════════════════════");
+        Debug.Log($"Всего ячеек: {allCells.Length}");
+        
+        if (Application.isPlaying)
+        {
+            Debug.Log($"Занято: {GetOccupiedCells().Count}");
+            Debug.Log($"Свободно: {GetFreeCells().Count}");
+            Debug.Log($"Размещение заблокировано: {(isPlacementLocked ? "ДА 🔒" : "НЕТ 🔓")}");
+        }
+        else
+        {
+            Debug.Log("⏸️ (Запустите игру для детальной статистики)");
+        }
+        
+        Debug.Log("═══════════════════════════════════════════════════════════");
+    }
+
+#if UNITY_EDITOR
+    [ContextMenu("🔧 Автоматически установить координаты по позиции")]
+    private void AutoAssignCoordinates()
+    {
+        GridCell[] allCells = GetComponentsInChildren<GridCell>();
+        
+        if (allCells.Length == 0)
+        {
+            Debug.LogWarning("❌ Ячейки не найдены!");
+            return;
+        }
+
+        Debug.Log("═══════════════════════════════════════════════════════════");
+        Debug.Log($"🔧 АВТОМАТИЧЕСКАЯ УСТАНОВКА КООРДИНАТ ({allCells.Length} ячеек)");
+        Debug.Log("═══════════════════════════════════════════════════════════");
+
+        // Находим позиции всех ячеек
+        float minX = float.MaxValue;
+        float maxX = float.MinValue;
+        float minY = float.MaxValue;
+        float maxY = float.MinValue;
+
+        foreach (var cell in allCells)
+        {
+            Vector3 pos = cell.transform.position;
+            if (pos.x < minX) minX = pos.x;
+            if (pos.x > maxX) maxX = pos.x;
+            if (pos.y < minY) minY = pos.y;
+            if (pos.y > maxY) maxY = pos.y;
+        }
+
+        // Вычисляем шаг сетки
+        float stepX = 0;
+        float stepY = 0;
+        
+        // Ищем два ближайших разных X
+        for (int i = 0; i < allCells.Length; i++)
+        {
+            for (int j = i + 1; j < allCells.Length; j++)
+            {
+                float diffX = Mathf.Abs(allCells[i].transform.position.x - allCells[j].transform.position.x);
+                if (diffX > 0.01f && (stepX == 0 || diffX < stepX))
+                    stepX = diffX;
+                    
+                float diffY = Mathf.Abs(allCells[i].transform.position.y - allCells[j].transform.position.y);
+                if (diffY > 0.01f && (stepY == 0 || diffY < stepY))
+                    stepY = diffY;
+            }
+        }
+
+        if (stepX == 0) stepX = 100; // Если только одна ячейка по X
+        if (stepY == 0) stepY = 100; // Если только одна ячейка по Y
+
+        Debug.Log($"📐 Границы сетки: X=[{minX:F1}..{maxX:F1}], Y=[{minY:F1}..{maxY:F1}]");
+        Debug.Log($"📏 Шаг сетки: X={stepX:F1}, Y={stepY:F1}");
+
+        int updatedCount = 0;
+
+        foreach (var cell in allCells)
+        {
+            Vector3 pos = cell.transform.position;
+            
+            // Вычисляем координаты на основе позиции
+            int gridX = Mathf.RoundToInt((pos.x - minX) / stepX);
+            int gridY = Mathf.RoundToInt((pos.y - minY) / stepY);
+
+            Vector2Int oldCoord = cell.gridPosition;
+            cell.gridPosition = new Vector2Int(gridX, gridY);
+            
+            // Помечаем объект как изменённый для сохранения
+            UnityEditor.EditorUtility.SetDirty(cell);
+            
+            updatedCount++;
+        }
+
+        Debug.Log($"✅ Обновлено координат: {updatedCount}");
+        Debug.Log("💾 Не забудьте СОХРАНИТЬ сцену! (Ctrl+S)");
+        Debug.Log("═══════════════════════════════════════════════════════════");
+        
+        // Показываем результат
+        ShowAllCoordinates();
+    }
+
+    [ContextMenu("🔧 Установить координаты вручную (сетка 10x10)")]
+    private void AutoAssignCoordinates10x10()
+    {
+        GridCell[] allCells = GetComponentsInChildren<GridCell>();
+        
+        if (allCells.Length == 0)
+        {
+            Debug.LogWarning("❌ Ячейки не найдены!");
+            return;
+        }
+
+        Debug.Log("═══════════════════════════════════════════════════════════");
+        Debug.Log($"🔧 УСТАНОВКА КООРДИНАТ 10x10 ({allCells.Length} ячеек)");
+        Debug.Log("═══════════════════════════════════════════════════════════");
+
+        // Сортируем по позиции (слева-направо, снизу-вверх)
+        System.Array.Sort(allCells, (a, b) => {
+            float diffY = a.transform.position.y - b.transform.position.y;
+            if (Mathf.Abs(diffY) > 0.1f)
+                return diffY < 0 ? -1 : 1;
+            float diffX = a.transform.position.x - b.transform.position.x;
+            return diffX < 0 ? -1 : 1;
+        });
+
+        int gridWidth = 10; // Ширина сетки
+        int updatedCount = 0;
+
+        for (int i = 0; i < allCells.Length; i++)
+        {
+            int gridX = i % gridWidth;
+            int gridY = i / gridWidth;
+
+            allCells[i].gridPosition = new Vector2Int(gridX, gridY);
+            UnityEditor.EditorUtility.SetDirty(allCells[i]);
+            
+            updatedCount++;
+        }
+
+        Debug.Log($"✅ Обновлено координат: {updatedCount}");
+        Debug.Log($"📐 Сетка: {gridWidth}x{(allCells.Length / gridWidth)}");
+        Debug.Log("💾 Не забудьте СОХРАНИТЬ сцену! (Ctrl+S)");
+        Debug.Log("═══════════════════════════════════════════════════════════");
+        
+        ShowAllCoordinates();
+    }
+#endif
 }
 
