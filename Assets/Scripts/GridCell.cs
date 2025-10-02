@@ -125,7 +125,15 @@ public class GridCell : MonoBehaviour, IPointerClickHandler
     /// </summary>
     private void LateUpdate()
     {
-        // Синхронизируем позицию размещенного объекта с ячейкой
+        // ОТКЛЮЧАЕМ синхронизацию если бой начался (персонажи должны свободно двигаться!)
+        GridManager manager = GetComponentInParent<GridManager>();
+        if (manager != null && manager.IsPlacementLocked())
+        {
+            // Бой идёт - не трогаем позицию персонажа!
+            return;
+        }
+        
+        // Синхронизируем позицию размещенного объекта с ячейкой (только в режиме расстановки)
         if (placedObject != null)
         {
             RectTransform placedRect = placedObject.GetComponent<RectTransform>();

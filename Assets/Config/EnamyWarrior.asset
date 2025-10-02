@@ -19,6 +19,6 @@ MonoBehaviour:
   damage: 10
   attackSpeed: 1
   attackRange: 1.5
-  moveSpeed: 2
+  moveSpeed: 5
   characterType: 0
   team: 1

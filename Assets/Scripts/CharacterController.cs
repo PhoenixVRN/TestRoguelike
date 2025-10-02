@@ -13,6 +13,7 @@ public class CharacterController : MonoBehaviour
     
     [Header("Ссылки")]
     [SerializeField] private CharacterAnimator characterAnimator;
+    [SerializeField] private HealthBar healthBar;
     
     [Header("Настройки")]
     [Tooltip("Показывать отладочную информацию")]
@@ -46,6 +47,11 @@ public class CharacterController : MonoBehaviour
         if (characterAnimator == null)
         {
             characterAnimator = GetComponent<CharacterAnimator>();
+        }
+        
+        if (healthBar == null)
+        {
+            healthBar = GetComponentInChildren<HealthBar>();
         }
     }
 
@@ -92,6 +98,9 @@ public class CharacterController : MonoBehaviour
         {
             characterAnimator.PlayIdle();
         }
+        
+        // Обновляем HP бар
+        UpdateHealthBar();
 
         if (showDebug)
         {
@@ -132,6 +141,11 @@ public class CharacterController : MonoBehaviour
         {
             float distanceToTarget = GetDistanceToTarget();
             
+            if (showDebug && Time.frameCount % 60 == 0) // Раз в секунду
+            {
+                Debug.Log($"📊 {config.characterName} [Team:{config.team}] → Цель: {currentTarget.GetCharacterName()} [Team:{currentTarget.GetTeam()}], Дистанция: {distanceToTarget:F1}, Range: {config.attackRange}");
+            }
+            
             // Если в радиусе атаки - атакуем
             if (distanceToTarget <= config.attackRange)
             {
@@ -147,6 +161,11 @@ public class CharacterController : MonoBehaviour
         {
             // Нет врагов - Idle
             SetState(CharacterState.Idle);
+            
+            if (showDebug && Time.frameCount % 120 == 0)
+            {
+                Debug.Log($"😴 {config.characterName} не нашёл врагов...");
+            }
         }
     }
 
@@ -195,6 +214,12 @@ public class CharacterController : MonoBehaviour
         Vector2 direction = (currentTarget.transform.position - transform.position).normalized;
         Vector2 newPosition = (Vector2)transform.position + direction * config.moveSpeed * Time.deltaTime;
         
+        if (showDebug && Time.frameCount % 60 == 0) // Каждую секунду
+        {
+            float dist = GetDistanceToTarget();
+            Debug.Log($"🏃 {config.characterName} движется к {currentTarget.GetCharacterName()}. Дистанция: {dist:F1}, Скорость: {config.moveSpeed}");
+        }
+        
         GetComponent<RectTransform>().position = newPosition;
     }
 
@@ -210,6 +235,11 @@ public class CharacterController : MonoBehaviour
         if (attackCooldownTimer > 0)
         {
             SetState(CharacterState.Idle);
+            
+            if (showDebug && Time.frameCount % 60 == 0)
+            {
+                Debug.Log($"⏳ {config.characterName} ждёт кулдаун: {attackCooldownTimer:F1}с");
+            }
             return;
         }
 
@@ -246,6 +276,9 @@ public class CharacterController : MonoBehaviour
             return;
 
         currentHealth -= damage;
+        
+        // Обновляем HP бар
+        UpdateHealthBar();
         
         if (showDebug)
         {
@@ -365,9 +398,23 @@ public class CharacterController : MonoBehaviour
         
         currentHealth = Mathf.Min(currentHealth + amount, config.maxHealth);
         
+        // Обновляем HP бар
+        UpdateHealthBar();
+        
         if (showDebug)
         {
             Debug.Log($"💚 {config.characterName} вылечен на {amount}. HP: {currentHealth}/{config.maxHealth}");
+        }
+    }
+    
+    /// <summary>
+    /// Обновить HP бар
+    /// </summary>
+    private void UpdateHealthBar()
+    {
+        if (healthBar != null && config != null)
+        {
+            healthBar.SetHealth(currentHealth, config.maxHealth);
         }
     }
 
