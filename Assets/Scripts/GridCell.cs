@@ -88,6 +88,9 @@ public class GridCell : MonoBehaviour, IPointerClickHandler
         RectTransform placedRect = placedObject.GetComponent<RectTransform>();
         if (placedRect != null)
         {
+            // Сохраняем исходный Scale из префаба
+            Vector3 originalScale = placedRect.localScale;
+            
             // Копируем мировую позицию этой ячейки + применяем офсет
             RectTransform myRect = GetComponent<RectTransform>();
             placedRect.position = myRect.position;
@@ -95,7 +98,8 @@ public class GridCell : MonoBehaviour, IPointerClickHandler
             // Применяем смещение
             placedRect.anchoredPosition += placementOffset;
             
-            placedRect.localScale = Vector3.one;
+            // Восстанавливаем исходный Scale (не перезаписываем!)
+            placedRect.localScale = originalScale;
             placedRect.localRotation = Quaternion.identity; // Всегда вертикально!
         }
 
