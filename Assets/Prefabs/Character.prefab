@@ -265,6 +265,7 @@ GameObject:
   - component: {fileID: 3371551045976436644}
   - component: {fileID: 5795084655431327167}
   - component: {fileID: 9073153748375265531}
+  - component: {fileID: -4936590328754913776}
   m_Layer: 5
   m_Name: Character
   m_TagString: Untagged
@@ -406,6 +407,23 @@ MonoBehaviour:
   characterAnimator: {fileID: 5795084655431327167}
   healthBar: {fileID: 4137986479112666776}
   showDebug: 1
+--- !u!114 &-4936590328754913776
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6609384685568130675}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e5f0a3b9c4d5e6f7a8b9c0d1e2f3a4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  avoidanceRadius: 1
+  avoidanceForce: 1
+  personalSpace: 1
+  avoidOnlyAllies: 0
+  showDebug: 0
 --- !u!1 &8749930489926099009
 GameObject:
   m_ObjectHideFlags: 0
